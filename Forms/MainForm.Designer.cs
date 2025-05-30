@@ -75,7 +75,7 @@ namespace WinFindGrep.Forms
 
             // Filters
             var lblFilters = new Label { Text = "Filters:", Location = new Point(12, 75), Size = new Size(50, 23) };
-            txtFilters = new TextBox { Location = new Point(95, 72), Size = new Size(350, 23), Text = "*.*" };
+            txtFilters = new TextBox { Location = new Point(95, 72), Size = new Size(350, 23), Text = "*.txt" };
 
             // Directories (modified to support multiple)
             var lblDirectories = new Label { Text = "Directories:", Location = new Point(12, 105), Size = new Size(80, 23) };
