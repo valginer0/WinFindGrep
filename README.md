@@ -1,0 +1,71 @@
+# WinFindGrep
+
+A Windows application for searching text in files across multiple directories, inspired by the functionality of the Unix "grep" command.
+
+## Features
+
+- Search for text across multiple directories simultaneously
+- Support for file filters (default: *.txt)
+- Advanced search options:
+  - Case sensitivity
+  - Whole word matching
+  - Regular expressions
+  - Extended search with escape characters (\n, \r, \t)
+- Replace functionality to update text in multiple files
+- Results displayed with file path, line number, and content
+- Double-click on results to open the file
+
+## Getting Started
+
+### Prerequisites
+
+- Windows operating system
+- No additional dependencies required (self-contained application)
+
+### Installation
+
+1. Download the latest release executable from the [Releases](https://github.com/valginer0/WinFindGrep/releases) page
+2. No installation needed - just run the .exe file
+
+### Building from Source (Optional)
+
+If you prefer to build from source:
+1. Clone this repository or download the source code
+2. Build the project using Visual Studio or JetBrains Rider
+3. For a standalone executable, use the "Publish" feature in your IDE with "Self-contained" and "Single file" options
+
+## Usage
+
+1. Enter the text to search for in the "Find what:" field
+2. Optionally, enter replacement text in the "Replace with:" field
+3. Specify file filters (e.g., *.txt, *.cs, *.xml) separated by commas
+4. Enter one or more directories to search in (separated by commas)
+5. Select your search options:
+   - Match whole word only
+   - Match case
+   - In all sub-folders
+   - In hidden folders
+6. Choose a search mode:
+   - Normal: Standard text search
+   - Extended: Support for escape sequences
+   - Regular expression: Use regex patterns
+7. Click "Find All" to search or "Replace in Files" to replace
+
+## Development
+
+The application is built with C# and .NET 9.0 using Windows Forms.
+
+### Project Structure
+
+- `Forms/`: Contains the UI components
+- `Models/`: Contains data models
+- `Services/`: Contains business logic for file operations
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- Inspired by grep command-line utility
+- Built with .NET and Windows Forms
