@@ -61,6 +61,12 @@ The application is built with C# and .NET 9.0 using Windows Forms.
 - `Models/`: Contains data models
 - `Services/`: Contains business logic for file operations
 
+## Support
+
+If you find this tool useful, consider supporting the development:
+
+[![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://www.paypal.me/ValeryGiner)
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
