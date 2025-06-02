@@ -63,9 +63,13 @@ The application is built with C# and .NET 9.0 using Windows Forms.
 
 ## Support
 
-If you find this tool useful, consider supporting the development:
+If you find this tool useful, consider supporting its development:
 
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa.svg)](https://github.com/sponsors/valginer0)
 [![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-blue.svg)](https://www.paypal.me/ValeryGiner)
+[![Ko-fi](https://img.shields.io/badge/Support-Ko--fi-FF5E5B.svg)](https://ko-fi.com/valginer)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00.svg?logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/valginer)
+[![Patreon](https://img.shields.io/badge/Support-Patreon-F96854.svg?logo=patreon)](https://patreon.com/ValeryGiner)
 
 ## License
 
