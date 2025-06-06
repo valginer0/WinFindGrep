@@ -2,6 +2,8 @@
 
 A Windows application for searching text in files across multiple directories, inspired by the functionality of the Unix "grep" command.
 
+**Website:** [https://valginer0.github.io/WinFindGrepWebsite/](https://valginer0.github.io/WinFindGrepWebsite/)
+
 ## Features
 
 - Search for text across multiple directories simultaneously
