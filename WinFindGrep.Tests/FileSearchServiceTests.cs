@@ -446,8 +446,8 @@ namespace WinFindGrep.Tests
             var progressUpdates = new List<(string, int, int)>();
             var matchesToReplace = new List<SearchResult>
             {
-                new() { FilePath = file1, LineNumber = 1, LineContent = "Hello world" },
-                new() { FilePath = file1, LineNumber = 2, LineContent = "Another world" }
+                new() { FilePath = file1, LineNumber = 1, LineContent = "Hello world", LastModified = File.GetLastWriteTime(file1) },
+                new() { FilePath = file1, LineNumber = 2, LineContent = "Another world", LastModified = File.GetLastWriteTime(file1) }
             };
 
             // Act
@@ -466,7 +466,7 @@ namespace WinFindGrep.Tests
             var file1 = CreateTempFile("regex_replace.txt", "number: 123, number: 456");
             var matchesToReplace = new List<SearchResult>
             {
-                new() { FilePath = file1, LineNumber = 1, LineContent = "number: 123, number: 456" }
+                new() { FilePath = file1, LineNumber = 1, LineContent = "number: 123, number: 456", LastModified = File.GetLastWriteTime(file1) }
             };
 
             // Act
@@ -501,7 +501,7 @@ namespace WinFindGrep.Tests
             var file1 = CreateTempFile("case_replace.txt", "Word word WORD");
             var matchesToReplace = new List<SearchResult>
             {
-                new() { FilePath = file1, LineNumber = 1, LineContent = "Word word WORD" }
+                new() { FilePath = file1, LineNumber = 1, LineContent = "Word word WORD", LastModified = File.GetLastWriteTime(file1) }
             };
 
             // Act - matchCase = true

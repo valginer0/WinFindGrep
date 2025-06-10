@@ -203,7 +203,8 @@ namespace WinFindGrep.Services
                         {
                             FilePath = filePath,
                             LineNumber = lineNumber,
-                            LineContent = line
+                            LineContent = line,
+                            LastModified = File.GetLastWriteTime(filePath)
                         });
                     }
                 }

@@ -109,11 +109,21 @@ namespace WinFindGrep.Forms
                 });
 
             // Update UI with results
+            lvResults.Items.Clear();
+
+            // Ensure the "Modified" column exists (added programmatically to avoid designer changes)
+            if (lvResults.Columns.Count < 4)
+            {
+                lvResults.Columns.Add("Modified", 120);
+            }
+
+            progressBar.Value = 0;
             foreach (var match in matches)
             {
                 var item = new ListViewItem(match.FilePath);
                 item.SubItems.Add(match.LineNumber.ToString());
                 item.SubItems.Add(match.LineContent.Trim());
+                item.SubItems.Add(match.LastModified.ToString("yyyy-MM-dd HH:mm"));
                 item.Tag = match;
                 lvResults.Items.Add(item);
             }

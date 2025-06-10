@@ -7,5 +7,6 @@ namespace WinFindGrep.Models
         public string FilePath { get; set; }
         public int LineNumber { get; set; }
         public string LineContent { get; set; }
+        public DateTime LastModified { get; set; }
     }
 }
