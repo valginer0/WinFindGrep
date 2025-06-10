@@ -6,6 +6,24 @@
         <Nullable>enable</Nullable>
         <UseWindowsForms>true</UseWindowsForms>
         <ImplicitUsings>enable</ImplicitUsings>
+        
+        <!-- Single-file publish settings -->
+        <PublishSingleFile>true</PublishSingleFile>
+        <SelfContained>true</SelfContained>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        <PublishReadyToRun>true</PublishReadyToRun>
+        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+        <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+        <DebugType>embedded</DebugType>
     </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="WinFindGrep.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="WinFindGrep.Tests\**\*.cs" />
+  </ItemGroup>
 
 </Project>

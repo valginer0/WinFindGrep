@@ -51,7 +51,7 @@ namespace WinFindGrep.Services
             return matches;
         }
 
-        private List<string> GetFilesToSearch(string[] directories, string[] filters, bool searchInSubFolders)
+        internal List<string> GetFilesToSearch(string[] directories, string[] filters, bool searchInSubFolders)
         {
             var allFiles = new List<string>();
             
@@ -85,7 +85,7 @@ namespace WinFindGrep.Services
             return allFiles.Distinct().ToList();
         }
 
-        private List<SearchResult> SearchInFile(
+        internal List<SearchResult> SearchInFile(
             string filePath, 
             string searchText, 
             bool matchCase, 
@@ -146,22 +146,24 @@ namespace WinFindGrep.Services
             return results;
         }
 
-        private bool PerformNormalSearch(string line, string searchText, bool matchCase, bool matchWholeWord)
+        internal bool PerformNormalSearch(string line, string searchText, bool matchCase, bool matchWholeWord)
         {
             var comparison = matchCase ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
-            
             if (matchWholeWord)
             {
-                var words = line.Split(new[] { ' ', '\t', '\n', '\r', '.', ',', ';', ':', '!', '?' }, StringSplitOptions.RemoveEmptyEntries);
-                return words.Any(word => string.Equals(word, searchText, comparison));
+                var escapedSearchText = Regex.Escape(searchText);
+                // This pattern uses negative lookarounds to ensure the search text is not preceded or
+                // followed by a word character (\w), making it a "whole word". This is more robust
+                // than \b in some edge cases involving punctuation.
+                var pattern = $@"(?<!\w){escapedSearchText}(?!\w)";
+                var options = matchCase ? RegexOptions.None : RegexOptions.IgnoreCase;
+                return Regex.IsMatch(line, pattern, options);
             }
-            else
-            {
-                return line.IndexOf(searchText, comparison) >= 0;
-            }
+
+            return line.IndexOf(searchText, comparison) >= 0;
         }
 
-        private string ProcessExtendedSearch(string searchText)
+        internal string ProcessExtendedSearch(string searchText)
         {
             return searchText
                 .Replace("\\n", "\n")
