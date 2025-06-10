@@ -32,6 +32,9 @@ namespace WinFindGrep.Services
             OnStatusUpdate?.Invoke("Searching files...");
             OnProgressUpdate?.Invoke(0); // Initial progress
 
+            // Give back the UI thread immediately; the rest will execute on a thread-pool thread.
+            await Task.Yield();
+
             if (allFiles == null || !allFiles.Any())
             {
                 OnStatusUpdate?.Invoke("No files found to search.");
@@ -43,31 +46,28 @@ namespace WinFindGrep.Services
             int totalFiles = filesToSearch.Count;
             int filesProcessed = 0;
 
-            await Task.Run(() =>
+            foreach (var file in filesToSearch)
             {
-                foreach (var file in filesToSearch)
-                {
-                    // Invoke the progressCallback with current file details
-                    progressCallback?.Invoke(Path.GetFileName(file), filesProcessed + 1, totalFiles);
+                // Invoke the progressCallback with current file details once per file
+                progressCallback?.Invoke(Path.GetFileName(file), filesProcessed + 1, totalFiles);
 
-                    try
+                try
+                {
+                    var fileResults = SearchInFile(file, searchText, matchCase, matchWholeWord, useRegex, useExtendedSearch);
+                    if (fileResults.Any())
                     {
-                        var fileResults = SearchInFile(file, searchText, matchCase, matchWholeWord, useRegex, useExtendedSearch);
-                        if (fileResults.Any())
-                        {
-                            matches.AddRange(fileResults);
-                        }
+                        matches.AddRange(fileResults);
                     }
-                    catch (Exception ex)
-                    {
-                        OnErrorOccurred?.Invoke($"Error searching file {file}: {ex.Message}");
-                    }
-                    filesProcessed++;
-                    int currentProgress = (int)((double)filesProcessed / totalFiles * 100);
-                    OnProgressUpdate?.Invoke(currentProgress);
-                    // OnStatusUpdate?.Invoke($"Processed {filesProcessed}/{totalFiles} files..."); // This might be too noisy with per-file callback
                 }
-            });
+                catch (Exception ex)
+                {
+                    OnErrorOccurred?.Invoke($"Error searching file {file}: {ex.Message}");
+                }
+
+                filesProcessed++;
+                int currentProgress = (int)((double)filesProcessed / totalFiles * 100);
+                OnProgressUpdate?.Invoke(currentProgress);
+            }
 
             OnStatusUpdate?.Invoke($"Search complete. Found {matches.Count} matches in {filesProcessed} files.");
             OnProgressUpdate?.Invoke(100);
@@ -161,34 +161,40 @@ namespace WinFindGrep.Services
 
             try
             {
-                var lines = File.ReadAllLines(filePath, Encoding.UTF8);
-                
-                for (int i = 0; i < lines.Length; i++)
+                // Prepare helpers once per file
+                string searchTextProcessed = useExtendedSearch ? ProcessExtendedSearch(searchText) : searchText;
+
+                Regex? regex = null;
+                if (useRegex)
                 {
-                    var line = lines[i];
-                    bool found = false;
+                    try
+                    {
+                        var regexOptions = matchCase ? RegexOptions.None : RegexOptions.IgnoreCase;
+                        regex = new Regex(searchText, regexOptions | RegexOptions.Compiled);
+                    }
+                    catch
+                    {
+                        // Invalid regex – fall back to normal search
+                        useRegex = false;
+                    }
+                }
+
+                using var reader = new StreamReader(filePath, Encoding.UTF8);
+                string? line;
+                int lineNumber = 0;
+
+                while ((line = reader.ReadLine()) != null)
+                {
+                    lineNumber++;
+                    bool found;
 
                     if (useRegex)
                     {
-                        try
-                        {
-                            var regexOptions = matchCase ? RegexOptions.None : RegexOptions.IgnoreCase;
-                            found = Regex.IsMatch(line, searchText, regexOptions);
-                        }
-                        catch
-                        {
-                            // Invalid regex, treat as normal search
-                            found = PerformNormalSearch(line, searchText, matchCase, matchWholeWord);
-                        }
-                    }
-                    else if (useExtendedSearch)
-                    {
-                        var processedSearchText = ProcessExtendedSearch(searchText);
-                        found = PerformNormalSearch(line, processedSearchText, matchCase, matchWholeWord);
+                        found = regex!.IsMatch(line);
                     }
                     else
                     {
-                        found = PerformNormalSearch(line, searchText, matchCase, matchWholeWord);
+                        found = PerformNormalSearch(line, searchTextProcessed, matchCase, matchWholeWord);
                     }
 
                     if (found)
@@ -196,7 +202,7 @@ namespace WinFindGrep.Services
                         results.Add(new SearchResult
                         {
                             FilePath = filePath,
-                            LineNumber = i + 1,
+                            LineNumber = lineNumber,
                             LineContent = line
                         });
                     }
