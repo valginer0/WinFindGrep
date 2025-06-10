@@ -85,11 +85,12 @@ namespace WinFindGrep.Forms
             var directories = txtDirectories.Text.Split(',').Select(d => d.Trim()).Where(d => !string.IsNullOrEmpty(d)).ToArray();
             var filters = txtFilters.Text.Split(',').Select(f => f.Trim()).Where(f => !string.IsNullOrEmpty(f)).ToArray();
             
+            // Corrected argument order to match FileSearchService.SearchFilesAsync signature
             var matches = await _searchService.SearchFilesAsync(
-                searchText,
-                directories,
-                filters,
-                chkInAllSubFolders.Checked,
+                directories, // 1st: directories
+                filters,     // 2nd: filters
+                chkInAllSubFolders.Checked, // 3rd: searchInSubFolders
+                searchText,  // 4th: searchText
                 chkMatchCase.Checked,
                 chkMatchWholeWord.Checked,
                 rbRegularExpression.Checked,

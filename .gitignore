@@ -3,3 +3,11 @@ obj/
 /packages/
 riderModule.iml
 /_ReSharper.Caches/
+
+# User-specific files
+*.DotSettings.user
+*.user
+
+# Build results
+publish/
+TestResults/

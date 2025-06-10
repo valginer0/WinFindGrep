@@ -11,50 +11,72 @@ namespace WinFindGrep.Services
 {
     public class FileSearchService
     {
+        public event Action<string> OnStatusUpdate;
+        public event Action<int> OnProgressUpdate;
+        public event Action<string> OnErrorOccurred;
+
         public async Task<List<SearchResult>> SearchFilesAsync(
-            string searchText, 
-            string[] directories, 
-            string[] filters, 
-            bool searchInSubFolders, 
-            bool matchCase, 
-            bool matchWholeWord, 
-            bool useRegex, 
+            string[] directories,
+            string[] filters,
+            bool searchInSubFolders,
+            string searchText,
+            bool matchCase,
+            bool matchWholeWord,
+            bool useRegex,
             bool useExtendedSearch,
             Action<string, int, int> progressCallback)
         {
-            var allFiles = GetFilesToSearch(directories, filters, searchInSubFolders);
+            var allFiles = await GetFilesToSearchAsync(directories, filters, searchInSubFolders);
             var matches = new List<SearchResult>();
             
-            progressCallback?.Invoke("Preparing search...", 0, allFiles.Count);
+            OnStatusUpdate?.Invoke("Searching files...");
+            OnProgressUpdate?.Invoke(0); // Initial progress
+
+            if (allFiles == null || !allFiles.Any())
+            {
+                OnStatusUpdate?.Invoke("No files found to search.");
+                OnProgressUpdate?.Invoke(100); // No files, so 100% complete
+                return matches;
+            }
+
+            var filesToSearch = allFiles.Distinct().ToList();
+            int totalFiles = filesToSearch.Count;
+            int filesProcessed = 0;
 
             await Task.Run(() =>
             {
-                for (int i = 0; i < allFiles.Count; i++)
+                foreach (var file in filesToSearch)
                 {
-                    var file = allFiles[i];
-                    
-                    progressCallback?.Invoke(Path.GetFileName(file), i + 1, allFiles.Count);
+                    // Invoke the progressCallback with current file details
+                    progressCallback?.Invoke(Path.GetFileName(file), filesProcessed + 1, totalFiles);
 
                     try
                     {
-                        var fileMatches = SearchInFile(file, searchText, matchCase, matchWholeWord, useRegex, useExtendedSearch);
-                        matches.AddRange(fileMatches);
+                        var fileResults = SearchInFile(file, searchText, matchCase, matchWholeWord, useRegex, useExtendedSearch);
+                        if (fileResults.Any())
+                        {
+                            matches.AddRange(fileResults);
+                        }
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
-                        // Skip files that can't be read (binary files, access denied, etc.)
-                        continue;
+                        OnErrorOccurred?.Invoke($"Error searching file {file}: {ex.Message}");
                     }
+                    filesProcessed++;
+                    int currentProgress = (int)((double)filesProcessed / totalFiles * 100);
+                    OnProgressUpdate?.Invoke(currentProgress);
+                    // OnStatusUpdate?.Invoke($"Processed {filesProcessed}/{totalFiles} files..."); // This might be too noisy with per-file callback
                 }
             });
 
+            OnStatusUpdate?.Invoke($"Search complete. Found {matches.Count} matches in {filesProcessed} files.");
+            OnProgressUpdate?.Invoke(100);
             return matches;
         }
 
-        internal List<string> GetFilesToSearch(string[] directories, string[] filters, bool searchInSubFolders)
+        internal async Task<List<string>> GetFilesToSearchAsync(string[] directories, string[] filters, bool searchInSubFolders)
         {
             var allFiles = new List<string>();
-            
             if (filters.Length == 0)
             {
                 filters = new[] { "*.*" };
@@ -67,22 +89,64 @@ namespace WinFindGrep.Services
                     continue;
                 }
 
-                foreach (var filter in filters)
+                try
                 {
-                    try
+                    foreach (var filter in filters)
                     {
-                        var searchOption = searchInSubFolders ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-                        var files = Directory.GetFiles(directory, filter, searchOption);
-                        allFiles.AddRange(files);
+                        var filesInCurrentDir = await Task.Run(() => Directory.GetFiles(directory, filter, SearchOption.TopDirectoryOnly));
+                        allFiles.AddRange(filesInCurrentDir);
                     }
-                    catch (Exception)
+
+                    if (searchInSubFolders)
                     {
-                        // Skip if access denied or other issue
+                        var subDirectories = await Task.Run(() => Directory.GetDirectories(directory));
+                        foreach (var subDir in subDirectories)
+                        {
+                            allFiles.AddRange(await GetFilesRecursivelyAsync(subDir, filters));
+                        }
                     }
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    // Skip top-level directory if we can't access it
+                }
+                catch (Exception)
+                {
+                    // Handle other potential exceptions
                 }
             }
 
             return allFiles.Distinct().ToList();
+        }
+
+        private async Task<List<string>> GetFilesRecursivelyAsync(string directory, string[] filters)
+        {
+            var files = new List<string>();
+
+            try
+            {
+                foreach (var filter in filters)
+                {
+                    var filesInCurrentDir = await Task.Run(() => Directory.GetFiles(directory, filter, SearchOption.TopDirectoryOnly));
+                    files.AddRange(filesInCurrentDir);
+                }
+
+                var subDirectories = await Task.Run(() => Directory.GetDirectories(directory));
+                foreach (var subDir in subDirectories)
+                {
+                    files.AddRange(await GetFilesRecursivelyAsync(subDir, filters));
+                }
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // This is expected for system folders, so we just skip them and continue.
+            }
+            catch (Exception)
+            {
+                // Log or handle other unexpected errors if necessary, but continue.
+            }
+
+            return files;
         }
 
         internal List<SearchResult> SearchInFile(
