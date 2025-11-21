@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using WinFindGrep.Models;
 
@@ -24,9 +25,10 @@ namespace WinFindGrep.Services
             bool matchWholeWord,
             bool useRegex,
             bool useExtendedSearch,
-            Action<string, int, int> progressCallback)
+            Action<string, int, int> progressCallback,
+            CancellationToken cancellationToken = default)
         {
-            var allFiles = await GetFilesToSearchAsync(directories, filters, searchInSubFolders);
+            var allFiles = await GetFilesToSearchAsync(directories, filters, searchInSubFolders, cancellationToken);
             var matches = new List<SearchResult>();
             
             OnStatusUpdate?.Invoke("Searching files...");
@@ -48,6 +50,8 @@ namespace WinFindGrep.Services
 
             foreach (var file in filesToSearch)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 // Invoke the progressCallback with current file details once per file
                 progressCallback?.Invoke(Path.GetFileName(file), filesProcessed + 1, totalFiles);
 
@@ -74,7 +78,7 @@ namespace WinFindGrep.Services
             return matches;
         }
 
-        internal async Task<List<string>> GetFilesToSearchAsync(string[] directories, string[] filters, bool searchInSubFolders)
+        internal async Task<List<string>> GetFilesToSearchAsync(string[] directories, string[] filters, bool searchInSubFolders, CancellationToken cancellationToken)
         {
             var allFiles = new List<string>();
             if (filters.Length == 0)
@@ -84,6 +88,8 @@ namespace WinFindGrep.Services
 
             foreach (var directory in directories)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 if (!Directory.Exists(directory))
                 {
                     continue;
@@ -93,22 +99,29 @@ namespace WinFindGrep.Services
                 {
                     foreach (var filter in filters)
                     {
-                        var filesInCurrentDir = await Task.Run(() => Directory.GetFiles(directory, filter, SearchOption.TopDirectoryOnly));
+                        cancellationToken.ThrowIfCancellationRequested();
+                        // Use EnumerateFiles and ToList to execute immediately but with less overhead than GetFiles
+                        var filesInCurrentDir = await Task.Run(() => Directory.EnumerateFiles(directory, filter, SearchOption.TopDirectoryOnly).ToList(), cancellationToken);
                         allFiles.AddRange(filesInCurrentDir);
                     }
 
                     if (searchInSubFolders)
                     {
-                        var subDirectories = await Task.Run(() => Directory.GetDirectories(directory));
+                        var subDirectories = await Task.Run(() => Directory.GetDirectories(directory), cancellationToken);
                         foreach (var subDir in subDirectories)
                         {
-                            allFiles.AddRange(await GetFilesRecursivelyAsync(subDir, filters));
+                            cancellationToken.ThrowIfCancellationRequested();
+                            allFiles.AddRange(await GetFilesRecursivelyAsync(subDir, filters, cancellationToken));
                         }
                     }
                 }
                 catch (UnauthorizedAccessException)
                 {
                     // Skip top-level directory if we can't access it
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
                 }
                 catch (Exception)
                 {
@@ -119,27 +132,35 @@ namespace WinFindGrep.Services
             return allFiles.Distinct().ToList();
         }
 
-        private async Task<List<string>> GetFilesRecursivelyAsync(string directory, string[] filters)
+        private async Task<List<string>> GetFilesRecursivelyAsync(string directory, string[] filters, CancellationToken cancellationToken)
         {
             var files = new List<string>();
 
             try
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 foreach (var filter in filters)
                 {
-                    var filesInCurrentDir = await Task.Run(() => Directory.GetFiles(directory, filter, SearchOption.TopDirectoryOnly));
+                    // Use EnumerateFiles and ToList
+                    var filesInCurrentDir = await Task.Run(() => Directory.EnumerateFiles(directory, filter, SearchOption.TopDirectoryOnly).ToList(), cancellationToken);
                     files.AddRange(filesInCurrentDir);
                 }
 
-                var subDirectories = await Task.Run(() => Directory.GetDirectories(directory));
+                var subDirectories = await Task.Run(() => Directory.GetDirectories(directory), cancellationToken);
                 foreach (var subDir in subDirectories)
                 {
-                    files.AddRange(await GetFilesRecursivelyAsync(subDir, filters));
+                    cancellationToken.ThrowIfCancellationRequested();
+                    files.AddRange(await GetFilesRecursivelyAsync(subDir, filters, cancellationToken));
                 }
             }
             catch (UnauthorizedAccessException)
             {
                 // This is expected for system folders, so we just skip them and continue.
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception)
             {
@@ -252,7 +273,8 @@ namespace WinFindGrep.Services
             bool matchWholeWord, 
             bool useRegex, 
             bool useExtendedSearch,
-            Action<string, int, int> progressCallback)
+            Action<string, int, int> progressCallback,
+            CancellationToken cancellationToken = default)
         {
             int replacedCount = 0;
             
@@ -265,6 +287,8 @@ namespace WinFindGrep.Services
             {
                 for (int i = 0; i < fileGroups.Count; i++)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
+
                     var filePath = fileGroups[i].Key;
                     progressCallback?.Invoke(Path.GetFileName(filePath), i + 1, fileGroups.Count);
                     
@@ -296,7 +320,7 @@ namespace WinFindGrep.Services
                             // Simple string replacement for now
                             // In a real implementation, this would need more work to handle whole word matching
                             content = content.Replace(textToFind, textToReplace, comparison);
-                            replacedCount++; // This is not accurate, would need to count actual replacements
+                            replacedCount += 1; // This is not accurate, would need to count actual replacements
                         }
                         
                         File.WriteAllText(filePath, content);
@@ -306,7 +330,7 @@ namespace WinFindGrep.Services
                         // Skip if file can't be read or written
                     }
                 }
-            });
+            }, cancellationToken);
             
             return replacedCount;
         }

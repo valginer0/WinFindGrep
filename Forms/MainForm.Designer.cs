@@ -9,7 +9,7 @@ namespace WinFindGrep.Forms
         private TextBox txtFindWhat;
         private TextBox txtReplaceWith;
         private TextBox txtFilters;
-        private TextBox txtDirectories;
+        private ComboBox txtDirectories;
         private CheckBox chkMatchWholeWord;
         private CheckBox chkMatchCase;
         private CheckBox chkFollowCurrentDoc;
@@ -79,7 +79,8 @@ namespace WinFindGrep.Forms
 
             // Directories (modified to support multiple)
             var lblDirectories = new Label { Text = "Directories:", Location = new Point(12, 105), Size = new Size(80, 23) };
-            txtDirectories = new TextBox { Location = new Point(95, 102), Size = new Size(300, 23), Text = "C:\\" };
+            txtDirectories = new ComboBox { Location = new Point(95, 102), Size = new Size(300, 23), Text = "C:\\" };
+            txtDirectories.DropDownStyle = ComboBoxStyle.DropDown;
             btnBrowse = new Button { Text = "...", Location = new Point(400, 102), Size = new Size(30, 23) };
             btnBrowse.Click += BtnBrowse_Click;
 

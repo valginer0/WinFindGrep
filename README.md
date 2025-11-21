@@ -15,7 +15,10 @@ A Windows application for searching text in files across multiple directories, i
   - Extended search with escape characters (\n, \r, \t)
 - Replace functionality to update text in multiple files
 - Results displayed with file path, line number, and content
+
 - Double-click on results to open the file
+- **Search History**: Remembers previously searched directories
+- **Cancellation**: Stop long-running searches instantly
 
 ## Getting Started
 

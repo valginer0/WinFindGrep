@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using WinFindGrep.Models;
@@ -13,11 +14,15 @@ namespace WinFindGrep.Forms
     public partial class MainForm : Form
     {
         private readonly FileSearchService _searchService;
+        private readonly HistoryService _historyService;
+        private CancellationTokenSource? _cts;
 
         public MainForm()
         {
             InitializeComponent();
             _searchService = new FileSearchService();
+            _historyService = new HistoryService();
+            LoadSearchHistory();
         }
 
         private void BtnBrowse_Click(object sender, EventArgs e)
@@ -34,16 +39,40 @@ namespace WinFindGrep.Forms
 
                 if (dialog.ShowDialog() == DialogResult.OK)
                 {
-                    if (string.IsNullOrEmpty(txtDirectories.Text))
-                        txtDirectories.Text = dialog.SelectedPath;
+                    var selectedPath = dialog.SelectedPath;
+                    
+                    // Add to history/dropdown immediately so it's visible
+                    if (!txtDirectories.Items.Contains(selectedPath))
+                    {
+                        txtDirectories.Items.Insert(0, selectedPath);
+                    }
+                    
+                    // If text is empty or just default, replace it. Otherwise append.
+                    if (string.IsNullOrEmpty(txtDirectories.Text) || txtDirectories.Text == "C:\\")
+                    {
+                        txtDirectories.Text = selectedPath;
+                    }
                     else
-                        txtDirectories.Text += "," + dialog.SelectedPath;
+                    {
+                        // Check if already in the text list to avoid duplicates
+                        var currentDirs = txtDirectories.Text.Split(',').Select(d => d.Trim()).ToList();
+                        if (!currentDirs.Contains(selectedPath, StringComparer.OrdinalIgnoreCase))
+                        {
+                            txtDirectories.Text += "," + selectedPath;
+                        }
+                    }
                 }
             }
         }
 
         private async void BtnFindAll_Click(object sender, EventArgs e)
         {
+            if (_cts != null)
+            {
+                _cts.Cancel();
+                return;
+            }
+
             if (string.IsNullOrEmpty(txtFindWhat.Text))
             {
                 MessageBox.Show("Please enter text to search for.", "Search", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -56,41 +85,53 @@ namespace WinFindGrep.Forms
                 return;
             }
 
-            btnFindAll.Enabled = false;
+            _cts = new CancellationTokenSource();
+            btnFindAll.Text = "Stop";
             btnReplaceInFiles.Enabled = false;
             lvResults.Items.Clear();
             progressBar.Value = 0;
             lblStatus.Text = "Searching...";
 
+            // Save history
+            _historyService.AddToHistory(txtDirectories.Text);
+            LoadSearchHistory(); // Refresh list to show new item at top
+
             try
             {
-                await SearchFiles();
+                await SearchFiles(_cts.Token);
+                lblStatus.Text = $"Search completed. Found {lvResults.Items.Count} matches.";
+            }
+            catch (OperationCanceledException)
+            {
+                lblStatus.Text = "Search canceled.";
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error during search: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                lblStatus.Text = "Error occurred.";
             }
             finally
             {
+                btnFindAll.Text = "Find All";
                 btnFindAll.Enabled = true;
                 btnReplaceInFiles.Enabled = true;
-                lblStatus.Text = $"Search completed. Found {lvResults.Items.Count} matches.";
                 progressBar.Value = 0;
+                _cts?.Dispose();
+                _cts = null;
             }
         }
 
-        private async Task SearchFiles()
+        private async Task SearchFiles(CancellationToken token = default)
         {
             var searchText = txtFindWhat.Text;
             var directories = txtDirectories.Text.Split(',').Select(d => d.Trim()).Where(d => !string.IsNullOrEmpty(d)).ToArray();
             var filters = txtFilters.Text.Split(',').Select(f => f.Trim()).Where(f => !string.IsNullOrEmpty(f)).ToArray();
             
-            // Corrected argument order to match FileSearchService.SearchFilesAsync signature
             var matches = await _searchService.SearchFilesAsync(
-                directories, // 1st: directories
-                filters,     // 2nd: filters
-                chkInAllSubFolders.Checked, // 3rd: searchInSubFolders
-                searchText,  // 4th: searchText
+                directories,
+                filters,
+                chkInAllSubFolders.Checked,
+                searchText,
                 chkMatchCase.Checked,
                 chkMatchWholeWord.Checked,
                 rbRegularExpression.Checked,
@@ -106,7 +147,8 @@ namespace WinFindGrep.Forms
                             progressBar.Value = current;
                         }
                     }));
-                });
+                },
+                token);
 
             // Update UI with results
             lvResults.Items.Clear();
@@ -230,6 +272,14 @@ namespace WinFindGrep.Forms
                     MessageBox.Show($"Could not open file: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
+        }
+        private void LoadSearchHistory()
+        {
+            var currentText = txtDirectories.Text;
+            var history = _historyService.LoadHistory();
+            txtDirectories.Items.Clear();
+            txtDirectories.Items.AddRange(history.ToArray());
+            txtDirectories.Text = currentText; // Restore current text
         }
     }
 }
