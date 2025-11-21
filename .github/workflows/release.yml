@@ -24,23 +24,9 @@ jobs:
     - name: Build
       run: dotnet publish WinFindGrep.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -o ./publish
 
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
       with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        draft: false
-        prerelease: false
-
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./publish/WinFindGrep.exe
-        asset_name: WinFindGrep.exe
-        asset_content_type: application/vnd.microsoft.portable-executable
+        files: ./publish/WinFindGrep.exe
+        generate_release_notes: true
