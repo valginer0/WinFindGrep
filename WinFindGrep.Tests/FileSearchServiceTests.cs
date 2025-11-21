@@ -93,7 +93,7 @@ namespace WinFindGrep.Tests
             var filters = Array.Empty<string>(); // No filters means *.*
 
             // Act
-            List<string> actualFiles = await _service!.GetFilesToSearchAsync(directories, filters, false); // searchInSubFolders = false
+            List<string> actualFiles = await _service!.GetFilesToSearchAsync(directories, filters, false, System.Threading.CancellationToken.None); // searchInSubFolders = false
 
             // Assert
             Assert.AreEqual(2, actualFiles.Count, "Should find 2 files in the top directory.");
@@ -115,7 +115,7 @@ namespace WinFindGrep.Tests
             var filters = new[] { "*.txt" };
 
             // Act
-            List<string> actualFiles = await _service!.GetFilesToSearchAsync(directories, filters, false);
+            List<string> actualFiles = await _service!.GetFilesToSearchAsync(directories, filters, false, System.Threading.CancellationToken.None);
 
             // Assert
             Assert.AreEqual(2, actualFiles.Count, "Should find 2 .txt files in the top directory.");
@@ -138,7 +138,7 @@ namespace WinFindGrep.Tests
             var filters = new[] { "*.txt", "*.log" };
 
             // Act
-            List<string> actualFiles = await _service!.GetFilesToSearchAsync(directories, filters, false);
+            List<string> actualFiles = await _service!.GetFilesToSearchAsync(directories, filters, false, System.Threading.CancellationToken.None);
 
             // Assert
             Assert.AreEqual(2, actualFiles.Count, "Should find 1 .txt and 1 .log file in the top directory.");
@@ -163,7 +163,7 @@ namespace WinFindGrep.Tests
             var filters = new[] { "*.txt" };
 
             // Act
-            List<string> actualFiles = await _service!.GetFilesToSearchAsync(directories, filters, true); // searchInSubFolders = true
+            List<string> actualFiles = await _service!.GetFilesToSearchAsync(directories, filters, true, System.Threading.CancellationToken.None); // searchInSubFolders = true
 
             // Assert
             Assert.AreEqual(3, actualFiles.Count, "Should find 3 .txt files recursively.");
@@ -179,7 +179,7 @@ namespace WinFindGrep.Tests
             var filters = new[] { "*.txt" };
 
             // Act
-            List<string> actualFiles = await _service!.GetFilesToSearchAsync(directories, filters, false);
+            List<string> actualFiles = await _service!.GetFilesToSearchAsync(directories, filters, false, System.Threading.CancellationToken.None);
 
             // Assert
             Assert.AreEqual(1, actualFiles.Count, "Should find 1 file from the existing directory, skipping the non-existent one.");
@@ -195,7 +195,7 @@ namespace WinFindGrep.Tests
             var filters = new[] { "*.*" };
 
             // Act
-            List<string> actualFiles = await _service!.GetFilesToSearchAsync(directories, filters, false);
+            List<string> actualFiles = await _service!.GetFilesToSearchAsync(directories, filters, false, System.Threading.CancellationToken.None);
 
             // Assert
             Assert.AreEqual(0, actualFiles.Count, "Should find 0 files in an empty directory.");
@@ -211,7 +211,7 @@ namespace WinFindGrep.Tests
             var filters = new[] { "*.txt" };
 
             // Act
-            List<string> actualFiles = await _service!.GetFilesToSearchAsync(directories, filters, false);
+            List<string> actualFiles = await _service!.GetFilesToSearchAsync(directories, filters, false, System.Threading.CancellationToken.None);
 
             // Assert
             Assert.AreEqual(1, actualFiles.Count, "Should return distinct files even if directory is listed multiple times.");
